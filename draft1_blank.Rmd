@@ -1,0 +1,257 @@
+---
+title: "Interactive dashboards by Monisha"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    social: menu
+    source_code: embed
+---
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+library(plyr)
+library(plotly)
+library(ggplot2)
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(dplyr)
+library(openintro)
+library(highcharter)
+
+
+# create some data
+b <- read.csv("~/b.csv")
+View(b)
+mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+```
+
+Overview
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+### Consumer Items Preference Analysis
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(paste("Global Statistics"),
+         color = "warning")
+```
+
+### Total no.of.orders received during 2010-2016
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(length(b$Order.ID),
+         icon = "fa-pencil")
+```
+
+
+### **Total Revenue**
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+gauge(round(mean(b$Total.Revenue),
+            digits = 6),
+            min = 0,
+            max = 10000000,
+            gaugeSectors(danger = c(0, 250000),
+                         warning = c(250000, 2500000),
+                         success = c(2500000, 10000000),
+                         colors = c("red", "yellow", "green")))
+```
+
+### times Europe tops as most demanded Region
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(sum(b$Region == "Europe"),
+         icon = 'fa-tag')
+```
+
+### times Cuba tops as most demanded Country
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(sum(b$Country == "Cuba"),
+         icon = 'fa-tag')
+```
+
+
+Row
+-----------------------------------------------------------------------
+
+### Time-Series of purchase orders according to Region
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+p<-plot_ly(data=b,y=~Date,color=~Region,type='scatter',mode='lines')
+p
+```
+
+
+Data Table
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+datatable(b,
+          caption = "Consumer Prefrence on Items",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
+
+
+
+Pivot Table
+=========================================
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+rpivotTable(b,
+            aggregatorName = "Count",
+            cols= "Unit.Price",
+            rows = "Region",
+            rendererName = "Heatmap")
+```
+
+
+Demand
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### The most sellable items are in Europe region!!
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+x<-c('Baby Food','Beverages','Cereal','Clothes','Cosmetics','Fruits','Household','Meat','Office Supplies','Personal Care','Snacks','Vegetables')
+y<-c(24,28,19,22,19,14,25,12,26,23,25,30)
+data <- data.frame(x,y)
+a<-ggplot(data,aes(x=x,y=y,ymin=12,ymax=30))+geom_pointrange(color="blue",size=2)+theme(axis.text.x = element_text(angle=45,hjust=1))
+ggplotly(a)
+
+
+```
+
+
+### Which item has highest demand in market?
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+
+b %>% plot_ly(labels = ~Item.Type, values = ~Units.Sold) %>% add_pie(hole = 0.6)
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Which item profited the sales in the market according to priority ?
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+ p <- plot_ly(b, x = ~Item.Type, y = ~Total.Profit, color = ~Order.Priority, type = "box") %>%
+  layout(boxmode = "group")
+p
+ 
+```
+
+### The disturibution of Total Revenue,Total Cost and Total Profit
+
+`
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+x<-c("TotalRevenue","TotalCost","TotalProfit")
+y<-c(132,93,39)
+data<-data.frame(x,y)
+plot_ly(data,x=~x,y=~y,type='bar',marker=list(color=c('rgba(204,204,204,1)','rgba(204,204,204,1)', 'rgba(222,45,38,0.8)'))) %>% layout(yaxis=list(title="Measured in crores"))
+```
+
+Supply
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+### How Cost and Price varied during selling of Item?
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+
+x<-c('Baby Food','Beverages','Cereal','Clothes','Cosmetics','Fruits','Household','Meat','Office Supplies','Personal Care','Snacks','Vegetables')
+z<-c(255.28,47.45,205.7,109.28,437.2,9.33,668.27,421.89,651.21,81.73,152.58,154.06)
+y<-c(159.42,31.79,117.11,35.84,263.33,6.92,502.54,364.69,524.96,56.67,97.44,90.93)
+data <- data.frame(x,y,z)
+data$x <- factor(data$x, levels = data[["x"]])
+p <- plot_ly(data, x = ~x, y = ~y, type = 'bar', name = 'Unit Cost', marker = list(color = 'rgb(49,130,189)')) %>% add_trace(y = ~z, name = 'Unit Price', marker = list(color = 'rgb(204,204,204)')) %>%layout(xaxis = list(title = "", tickangle = -45),yaxis = list(title = ""),margin = list(b = 100),barmode = 'group')
+p
+```
+
+### How the difference in Cost and Price increased Profits in market share?
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+pal<-c("grey","grey","yellow","green","yellow","grey","grey","red","grey","grey","grey","yellow")
+s<-plot_ly(data=b,x=b$Item.Type,y=((b$Unit.Price-b$Unit.Cost)/b$Unit.Price)*100,type='scatter',color=~Item.Type,colors=pal)
+s
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Units Sold according to Items
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+plot_ly(b,x=~Item.Type,y=~Units.Sold,type='violin',split=~Item.Type,box=list(visible=T),mean=list(visible=T))
+```
+
+### The most sellable items are in Cuba country!!!?
+
+```{r}
+y<- c(1,1,2,1,2,1,2,1) 
+x<-c('Beverages','Cereal','Clothes','Cosmetics','Household','Meat','Office Supplies','Personal Care')
+data <- data.frame(x,y)
+ plot_ly(data, labels = ~x, values =~y) %>% add_pie(hole=0.6)
+
+```
+
+
+Summary {data-orientation=columns} 
+===========================================
+
+Column 
+-----------------------------------
+
+### Max Unit Price
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(max(b$Unit.Price),
+         icon = "fa-random" )
+```
+
+### Max Unit Cost
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(max(b$Unit.Cost),
+         icon = "fa-random" )
+```
+
+### Average Items Pricing 
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(round(mean(b$Unit.Price),
+               digits = 3),
+         icon = "fa-thumbs-up")
+```
+
+### Average Items Sold 
+
+```{r,error=FALSE,warning=FALSE,message=FALSE}
+valueBox(round(mean(b$Units.Sold), digits = 4),
+         icon = "fa-thumbs-up")
+```
+
+Column
+---------------------------
+
+Report
+
+* This is a report for 1000 Items analysed.
+* Created by<b> Monisha Anila</b> on Consumer Preference Items Analysis. 
+* <b>Europe</b>'s one of the most sellable `Beverages` gives strong confidence on demand in market.
+* When coming to the overall profit `Beverages` is less than `Meat` considering <b>Europe</b>'s statistics.
+* When varying cost and price of the items `Households` hold the highest spot but in profits `Clothes` tops the list.
+* The profited item `Clothes` tops the most sellable item in <b>Cuba</b>. Making significant important item not only in <b>Cuba</b> but to the entire world.
+* This report was generated on `r format(Sys.Date(), format = "%B %d, %Y")`.
